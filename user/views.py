@@ -32,3 +32,35 @@ def naver_callback(request):
     profile_data = profile_response.json()
 
     return Response(profile_data)
+
+
+def google_login(request):
+    client_id = getattr(settings, 'OAUTH_GOOGLE_CLIENT_ID')
+    redirect_uri = getattr(settings, 'OAUTH_GOOGLE_REDIRECT_URI')
+    scope = 'https://www.googleapis.com/auth/userinfo.profile'
+
+    encoded_redirect_uri = urllib.parse.quote(redirect_uri)
+    encoded_scope = urllib.parse.quote(scope)
+    
+    return redirect(
+        f'https://accounts.google.com/o/oauth2/v2/auth?scope={encoded_scope}&access_type=offline&response_type=code&state=test&redirect_uri={encoded_redirect_uri}&client_id={client_id}'
+    )
+
+
+@api_view(['GET'])
+def google_callback(request):
+    client_id = getattr(settings, 'OAUTH_GOOGLE_CLIENT_ID')
+    client_secret = getattr(settings, 'OAUTH_GOOGLE_CLIENT_SECRET')
+    redirect_uri = getattr(settings, 'OAUTH_GOOGLE_REDIRECT_URI')
+    authorization_code = request.query_params['code']
+
+    encoded_redirect_uri = urllib.parse.quote(redirect_uri)
+
+    token_response = requests.post(f'https://oauth2.googleapis.com/token?client_id={client_id}&client_secret={client_secret}&code={authorization_code}&grant_type=authorization_code&redirect_uri={encoded_redirect_uri}')
+    access_token = token_response.json()['access_token']
+
+    headers = {'Authorization': f'Bearer {access_token}'}
+    profile_response = requests.get('https://www.googleapis.com/oauth2/v2/userinfo', headers=headers)
+    profile_data = profile_response.json()
+
+    return Response(profile_data)
