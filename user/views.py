@@ -8,30 +8,29 @@ import requests
 import urllib
 
 
-@api_view(['GET'])
 def naver_login(request):
     client_id = getattr(settings, 'OAUTH_NAVER_CLIENT_ID')
-    rediret_url = 'http://127.0.0.1:8000/user/naver/callback'
-    encoded_redirect_url = urllib.parse.quote(rediret_url)
+    rediret_uri = getattr(settings, 'OAUTH_NAVER_REDIRECT_URI')
+    encoded_redirect_uri = urllib.parse.quote(rediret_uri)
 
-    return redirect(f'https://nid.naver.com/oauth2.0/authorize?response_type=code&client_id={client_id}&redirect_uri={encoded_redirect_url}&state=test')
+    return redirect(f'https://nid.naver.com/oauth2.0/authorize?response_type=code&client_id={client_id}&redirect_uri={encoded_redirect_uri}&state=test')
 
 
 @api_view(['GET'])
 def naver_callback(request):
-    print(request.query_params['code'])
     client_id = getattr(settings, 'OAUTH_NAVER_CLIENT_ID')
     client_secret = getattr(settings, 'OAUTH_NAVER_CLIENT_SECRET')
-    code = request.query_params['code']
+    authorization_code = request.query_params['code']
 
-    token_response = requests.get(f'https://nid.naver.com/oauth2.0/token?grant_type=authorization_code&client_id={client_id}&client_secret={client_secret}&code={code}&state=test')
+    token_response = requests.get(f'https://nid.naver.com/oauth2.0/token?grant_type=authorization_code&client_id={client_id}&client_secret={client_secret}&code={authorization_code}&state=test')
     access_token = token_response.json()['access_token']
 
     headers = {'Authorization': f'Bearer {access_token}'}
-    profile_response = requests.get('https://openapi.naver.com/v1/nid/me', headers=headers)
-    profile_data = profile_response.json()
+    userinfo_response = requests.get('https://openapi.naver.com/v1/nid/me', headers=headers)
+    userinfo_data = userinfo_response.json()['response']
+    email = userinfo_data['email']
 
-    return Response(profile_data)
+    return Response(email)
 
 
 def google_login(request):
