@@ -37,7 +37,7 @@ def naver_callback(request):
 def google_login(request):
     client_id = getattr(settings, 'OAUTH_GOOGLE_CLIENT_ID')
     redirect_uri = getattr(settings, 'OAUTH_GOOGLE_REDIRECT_URI')
-    scope = 'https://www.googleapis.com/auth/userinfo.profile'
+    scope = 'https://www.googleapis.com/auth/userinfo.email'
 
     encoded_redirect_uri = urllib.parse.quote(redirect_uri)
     encoded_scope = urllib.parse.quote(scope)
@@ -60,7 +60,7 @@ def google_callback(request):
     access_token = token_response.json()['access_token']
 
     headers = {'Authorization': f'Bearer {access_token}'}
-    profile_response = requests.get('https://www.googleapis.com/oauth2/v2/userinfo', headers=headers)
-    profile_data = profile_response.json()
+    userinfo_response = requests.get('https://www.googleapis.com/oauth2/v2/userinfo', headers=headers)
+    email = userinfo_response.json()['email']
 
-    return Response(profile_data)
+    return Response(email)
