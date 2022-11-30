@@ -8,6 +8,8 @@ from rest_framework_simplejwt.tokens import RefreshToken
 import requests
 import urllib
 
+from .models import User
+
 
 def get_tokens_for_user(user):
     refresh = RefreshToken.for_user(user)
@@ -16,6 +18,16 @@ def get_tokens_for_user(user):
         'refresh': str(refresh),
         'access': str(refresh.access_token),
     }
+
+
+def get_or_create_user(email):
+    try:
+        user = User.objects.get(email=email)
+    except User.DoesNotExist:
+        random_password = User.objects.make_random_password()
+        user = User.objects.create_user(email=email, password=random_password)
+
+    return user
 
 
 def naver_login(request):
@@ -40,7 +52,9 @@ def naver_callback(request):
     userinfo_data = userinfo_response.json()['response']
     email = userinfo_data['email']
 
-    return Response(email)
+    user = get_or_create_user(email)
+
+    return Response(get_tokens_for_user(user))
 
 
 def google_login(request):
@@ -72,4 +86,6 @@ def google_callback(request):
     userinfo_response = requests.get('https://www.googleapis.com/oauth2/v2/userinfo', headers=headers)
     email = userinfo_response.json()['email']
 
-    return Response(email)
+    user = get_or_create_user(email)
+
+    return Response(get_tokens_for_user(user))
