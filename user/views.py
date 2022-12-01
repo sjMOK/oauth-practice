@@ -26,6 +26,7 @@ def get_or_create_user(email):
     except User.DoesNotExist:
         random_password = User.objects.make_random_password()
         user = User.objects.create_user(email=email, password=random_password)
+        SocialAccount.objects.create(user=user, resource_server=resource_server)
 
     return user
 
