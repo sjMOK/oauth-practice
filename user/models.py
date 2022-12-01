@@ -24,3 +24,11 @@ class User(AbstractBaseUser):
 
     class Meta:
         db_table = 'user'
+
+
+class SocialAccount(models.Model):
+    user = models.OneToOneField(User, models.CASCADE, primary_key=True, related_name='social_account')
+    resource_server = models.CharField(max_length=20)
+
+    class Meta:
+        db_table = 'social_account'
