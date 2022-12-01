@@ -4,11 +4,13 @@ from django.conf import settings
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework.status import HTTP_400_BAD_REQUEST
 
 import requests
 import urllib
 
-from .models import User
+from .models import User, SocialAccount
+from common.exceptions import BadRequestException
 
 
 def get_tokens_for_user(user):
@@ -20,9 +22,15 @@ def get_tokens_for_user(user):
     }
 
 
-def get_or_create_user(email):
+def get_or_create_user(email, resource_server):
     try:
         user = User.objects.get(email=email)
+
+        if not hasattr(user, 'social_account'):
+            raise BadRequestException(detail='sign in with your email account.')
+        if not user.social_account.resource_server == resource_server:
+            raise BadRequestException(detail='different social account.')
+
     except User.DoesNotExist:
         random_password = User.objects.make_random_password()
         user = User.objects.create_user(email=email, password=random_password)
@@ -41,6 +49,8 @@ def naver_login(request):
 
 @api_view(['GET'])
 def naver_callback(request):
+    resource_server = 'naver'
+
     client_id = getattr(settings, 'OAUTH_NAVER_CLIENT_ID')
     client_secret = getattr(settings, 'OAUTH_NAVER_CLIENT_SECRET')
     authorization_code = request.query_params['code']
@@ -53,7 +63,7 @@ def naver_callback(request):
     userinfo_data = userinfo_response.json()['response']
     email = userinfo_data['email']
 
-    user = get_or_create_user(email)
+    user = get_or_create_user(email, resource_server)
 
     return Response(get_tokens_for_user(user))
 
@@ -73,6 +83,8 @@ def google_login(request):
 
 @api_view(['GET'])
 def google_callback(request):
+    resource_server = 'google'
+
     client_id = getattr(settings, 'OAUTH_GOOGLE_CLIENT_ID')
     client_secret = getattr(settings, 'OAUTH_GOOGLE_CLIENT_SECRET')
     redirect_uri = getattr(settings, 'OAUTH_GOOGLE_REDIRECT_URI')
@@ -87,6 +99,6 @@ def google_callback(request):
     userinfo_response = requests.get('https://www.googleapis.com/oauth2/v2/userinfo', headers=headers)
     email = userinfo_response.json()['email']
 
-    user = get_or_create_user(email)
+    user = get_or_create_user(email, resource_server)
 
     return Response(get_tokens_for_user(user))
